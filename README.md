@@ -5,5 +5,5 @@ npm i
 ```
 
 ```
-node derver.js
+node server.js
 ```
