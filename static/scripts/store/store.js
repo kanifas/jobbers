@@ -4,7 +4,7 @@ import { STORAGE_NAME } from '../constants.js';
 function getStorage() {
   const storage = JSON.parse(localStorage.getItem(STORAGE_NAME));
   if (!storage) {
-    return {}
+    return []
   }
   return storage
 }
@@ -18,15 +18,12 @@ class EventObserver {
   constructor() {
     this.observers = []
   }
-
   subscribe(fn) {
     this.observers.push(fn)
   }
-
   unsubscribe(fn) {
     this.observers = this.observers.filter(subscriber => subscriber !== fn)
   }
-
   broadcast(data) {
     this.observers.forEach(subscriber => subscriber(data))
   }
@@ -34,48 +31,62 @@ class EventObserver {
 
 export const observer = new EventObserver();
 
-const state = {
-  cards: Object.values(getStorage()),
-};
-
-setTimeout(() => observer.broadcast(state));
+setTimeout(() => observer.broadcast(getStorage()), 0);
 
 export default {
   createItem(item) {
     const id = uniqId();
     const storage = getStorage();
-    const newItem = {
-      ...item,
-      id,
-      order: Object.keys(storage).length,
-    };
-    storage[id] = newItem;
-    state.cards.push(newItem);
+    const newItem = { ...item, id };
+    storage.push(newItem);
     setStorage(storage);
-    observer.broadcast(state);
+    return newItem;
+  },
+
+  deleteItem(id) {
+    const storage = getStorage().filter(item => item.id !== id);
+    setStorage(storage);
+    return id;
   },
 
   updateItem(id, fields) {
     const storage = getStorage();
-    const item = storage[id];
-    storage[id] = {
-      ...item,
-      ...fields,
+    const index = storage.findIndex(item => item.id === id);
+    storage[index] = {
+      ...storage[index],
+      ...fields
     }
-    state.cards = Object.values(storage)
     setStorage(storage);
-    observer.broadcast(state);
-  },
+    observer.broadcast(storage);
+  },  
 
-  deleteItem(id) {
+  moveItemBack(id) {
     const storage = getStorage();
-    const item = storage[id];
-    delete storage[id];
-    state.cards = Object.values(storage);
-    observer.broadcast(state);
+    const index = storage.findIndex(item => item.id === id);
+    if (index === 0) {
+      return
+    }
+    [storage[index-1], storage[index]] = [storage[index], storage[index-1]];
+    setStorage(storage);
+    observer.broadcast(storage);
   },
 
-  // getItems()
+  moveItemForward(id) {
+    const storage = getStorage();
+    const index = storage.findIndex(item => item.id === id);
+    if (index === storage.length - 1) {
+      return
+    }
+    [storage[index], storage[index+1]] = [storage[index+1], storage[index]];
+    setStorage(storage);
+    observer.broadcast(storage);
+  },
+
+  fetchItems() {
+    const storage = getStorage();
+    observer.broadcast(storage);
+    return storage;
+  }
 }
 
 
